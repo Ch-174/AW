@@ -1,15 +1,24 @@
 <script>
   import { Route } from "svelte-navigator";
-  import { InserirClienteNA } from '.';
-  import { InserirClienteA } from '.';
+  import { InserirLocacaoClienteA ,InserirLocacaoClienteNA,ListarLocacoesAll,ListarLocacoesAllMulta,RetirarLocacao} from '.';
+ 
 </script>
 
 <aside class="right-side">
-  <Route path="/InserirLocacaoClienteNA">
-    <InserirClienteNA />
-  </Route>
   <Route path="/InserirLocacaoClienteA">
-    <InserirClienteA />
+    <InserirLocacaoClienteA />
+  </Route>
+  <Route path="/InserirLocacaoClienteNA">
+    <InserirLocacaoClienteNA />
+  </Route>
+  <Route path="/ListarLocacoesAll">
+    <ListarLocacoesAll />
+  </Route>
+  <Route path="/ListarLocacoesAllMulta">
+    <ListarLocacoesAllMulta />
+  </Route>
+  <Route path="/RetirarLocacao">
+    <RetirarLocacao />
   </Route>
   <Route path="/">
     <h1>Sistema de Aluguel de filmes</h1>

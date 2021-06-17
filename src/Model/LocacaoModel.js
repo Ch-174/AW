@@ -21,7 +21,7 @@ class Locacao{
             if (doc.exists) {
               id =  doc.data();
             } else {
-                // doc.data() will be undefined in this case
+                
                 console.log("No such document!");
             }
         }).catch((error) => {
@@ -35,7 +35,7 @@ class Locacao{
             console.log("Document successfully updated!");
         })
         .catch((error) => {
-            // The document probably doesn't exist.
+            
             console.error("Error updating document: ", error);
         });
         return id;
@@ -46,7 +46,7 @@ class Locacao{
         db.collection("cliente").doc("fhsfwLdFNv9OaCeXLpBh").add({
             name: "Tokyo",
             country: "Japan",
-            associado: true(booleano),
+            associado: true,
             empresa: "qualquer",
             id:this.getId() ,
             nome: "João",

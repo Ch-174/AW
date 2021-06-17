@@ -3,8 +3,12 @@
 	const userName = "Pérsida Chita";
 	const src = "images/avatar-icon.jpeg";
 	let clBool = false;
+	let listarBool = false;
 	function handleInserirClick(){
 		clBool = !clBool;
+	}
+	function handleListarClick(){
+		listarBool = !listarBool;
 	}
 </script>
 
@@ -21,7 +25,7 @@
 			<span on:click={handleInserirClick}>Inserir Locação</span>
 	
 		{#if clBool}
-				<section class="selecionarInserir">
+				<section class="selecionar">
 					<Link to="/InserirLocacaoClienteA">
 						<span>Inserir Locação de Cliente Associado</span>
 					</Link>
@@ -31,12 +35,21 @@
 				</section>	
 		{/if}
 		
-		<Link to="/">
+		<Link to="/RetirarLocacao">
 			<span>Retirar Locação</span>
 		</Link>
-		<Link to="/">
-			<span>Listar Locações</span>
-		</Link>
+		
+		<span on:click={handleListarClick}>Listar Locações</span>
+		{#if listarBool}
+				<section class="selecionar">
+					<Link to="/ListarLocacoesAll">
+						<span>Listar todas locações</span>
+					</Link>
+					<Link to="/ListarLocacoesAllMulta">
+						<span>Listar todas locações com multa</span>
+					</Link>
+				</section>	
+		{/if}
 		<Link to="/">
 			<span>Listar Clientes Não-Associados com Multa</span>
 		</Link>
@@ -83,11 +96,11 @@
 	.nav-bar > span:hover {
 		background-color: rgb(51, 0, 43);
 	}
-	.selecionarInserir{
+	.selecionar{
 		
 		margin: 1rem;
 	}
-	.selecionarInserir > span{
+	.selecionar > span{
 		margin: 1rem;
 		display: block;
 		cursor: pointer;
@@ -100,8 +113,8 @@
 		transition: all 300ms ease-in-out;
 		background-color: rgb(146, 1, 122);
 	}
-	.selecionarInserir > span:hover {
+	.selecionar > span:hover {
 		background-color: rgb(51, 0, 43);
 	}
-
+	
 </style>

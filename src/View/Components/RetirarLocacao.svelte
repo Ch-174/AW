@@ -1,27 +1,24 @@
 
 <body style="background-color: rgb(27, 8, 27);">
-    <aside class="InserirClienteA">
+    <aside class="retirar">
         <fieldset>
-            <legend>Cliente Associado</legend>
-            <form name="clienteA" method="POST">
+            <legend>Retirar Locacao</legend>
+            <form name="retirar" method="POST">
                 <label for="nome">Nome</label>
                 <input name="nome" id="nome">
-                <br>
-                <label for="empresa">Empresa</label>
-                <input name="empresa" id="empresa">
                 <br>
                 <label for="filme">Selecione o Filme</label>
                 <input name="filme" id="filme" list="filmes">
                 <datalist id="filmes" >
                     <option value="valor1">Valor1</option>
                 </datalist>
-                <input type="button" id="botao" on:click="" value="Confirmar">
+                <input type="button" id ="botao" value="Eliminar">
             </form>
         </fieldset>
     </aside>
     </body>
     <style>
-         .InserirClienteA {
+         .retirar {
        
         padding: 1rem 2rem;
         margin: 5rem 2rem;

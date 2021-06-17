@@ -2,7 +2,7 @@
     <aside class="InserirClienteNA">
         <fieldset>
             <legend>Cliente Não-Associado</legend>
-            <form action="">
+            <form name="clienteNA" method="POST">
                 <label for="nome">Nome</label>
                 <input name="nome" id="nome">
                 <br>
@@ -28,6 +28,8 @@
                 <datalist id="filmes" >
                     <option value="valor1">Valor1</option>
                 </datalist>
+                <input type="button" id="botao" on:click="" value="Confirmar">
+
             </form>
         </fieldset>
     </aside>
@@ -56,5 +58,9 @@
       }
       #filme{
           min-width: 20rem;
+      }
+      #botao{
+		background-color: rgb(51, 0, 43);;
+        border-radius: 0.2rem;
       }
     </style>
