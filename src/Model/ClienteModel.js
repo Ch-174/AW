@@ -1,3 +1,5 @@
+"useStrict"
+
 class Cliente{
     constructor (nome){
         this.nome = nome;
@@ -8,7 +10,7 @@ export default class Associado extends Cliente{
     constructor(empresa,nome, qntFilmes){
         super(nome);
         this.empresa = empresa;
-        this.qntFilmes = quantFilmes;
+        this.qntFilmes = qntFilmes;
     }
     getEmpresa() {return this.empresa;}
     getQntFilmes() {return this.quantFilmes;}
@@ -33,6 +35,6 @@ import firebase from './firebase';
 // dentro da função classe ou obj
 
   const db = firebase.firestore();
-  const clientes = db.collection(nome).get().then(docs => docs.data()); // cleintes será um array
+  const clientes = db.collection(nome).get().then(docs => docs.data()); // clientes será um array
 
 
