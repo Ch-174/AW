@@ -1,41 +1,8 @@
-
-import {getLocacoesLista} from '../../Controllers/LocacaoController';
 <script>
-import { getClientesLista } from "../../Controllers/ClienteController";
-import { getLocacoesLista } from "../../Controllers/LocacaoController";
-import {getFilmeLista} from '../../Controllers/FilmeController';
-function filtrarLocacoes(){
-  const loc = [];
-  const auxL = [];
-var today = new Date();
-var dd = String(today.getDate()).padStart(2, '0');
-var mm = String(today.getMonth() + 1).padStart(2, '0'); //January is 0!
-var yyyy = today.getFullYear();
-
-today = mm + '/' + dd + '/' + yyyy;
-  auxL = getLocacoesLista();
-  if(auxL.dataEntrega > today){
-    loc = auxL;
-  }
-  return loc;
-}
-  const clientes ;
-  function listarClientesById(id){
-    
-    const clientesAux ;
-    clientesAux =getClientesLista();
-    if(id == clientesAux.id && clientesAux.associado == false){
-      clientes = clientesAux;
-    }
-  }
-  const filmes ;
-  function listarFilmesByID(id){
-    const aux ;
-    clientesAux = getFilmeLista();
-    if(id == clientesAux.id){
-      clientes = clientesAux;
-    }
-  }
+  import { listarLocacoes } from "../../Controllers/LocacaoController";
+  
+  const listaLocacoes = listarLocacoes;
+  
 </script>
 
 <body style="background-color: rgb(27, 8, 27);">
@@ -53,16 +20,15 @@ today = mm + '/' + dd + '/' + yyyy;
                     </tr>
                 </thead>
                 <tbody>
-                  {#await filtrarLocacoes()}
-                 <!-- <td>Carregando...</td> -->
+                  {#await listaLocacoes()}
+                  <tr>
+                    <td colspan="4">Carregando...</td>
+                  </tr>
                 {:then locacoes} 
-                  {#each locacoes as locacao}
-              
-                    {listarFilmesByID(locacao.idF)}
-                      {listarClientesById(locacao.idC)}
+                  {#each locacoes.filter(({ associado, multa }) => !associado && multa) as locacao}
                     <tr>
-                      <td>{clientes.nome}</td>
-                      <td>{filmes.titulo}</td>
+                      <td>{locacao.nome}</td>
+                      <td>{locacao.titulo}</td>
                       <td>{locacao.dataAluguer}</td>
                       <td>{locacao.dataEntrega}</td>
                     </tr>
@@ -92,7 +58,6 @@ today = mm + '/' + dd + '/' + yyyy;
      color: white;
    }
    th{
-      
       background-color: rgb(70, 22, 70);
    }
      
