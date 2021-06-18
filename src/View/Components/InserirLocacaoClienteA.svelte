@@ -1,21 +1,47 @@
+<script>
+	import { AddLocacaoCA } from 'src/Controllers/LocacaoController.js';
 
+	let nome = '';
+	const setNome = (e) => nome = e.target.value;
+	let empresa = '';
+	const setEmpresa = (e) => {
+		empresa = e.target.value;
+	}
+  let dataE = '';
+	const setDataE = (e) => {
+		dataE = e.target.value;
+	}
+  let filme = '';
+	const setFilme = (e) => {
+		filme= e.target.value;
+	}
+	const handleSubmit = () => AddLocacaoCA(filme,dataE,empresa, nome);
+</script>
 <body style="background-color: rgb(27, 8, 27);">
     <aside class="InserirClienteA">
         <fieldset>
             <legend>Cliente Associado</legend>
-            <form name="clienteA" method="POST">
+            <form name="clienteA" method="POST" on:submit|preventDefault={handleSubmit}>
                 <label for="nome">Nome</label>
-                <input name="nome" id="nome">
+                {nome}
+                <input name="nome" id="nome" on:keyup={setNome} placeholder="nome">
                 <br>
                 <label for="empresa">Empresa</label>
-                <input name="empresa" id="empresa">
+                {empresa}
+                <input name="empresa" id="empresa" on:keyup={setEmpresa} placeholder="empresa">
+                <br>
+                <label for="dataE">Data de entrega</label>
+                <label for="dataE">Formato:December 10, 1815 </label> 
+                {dataE}
+                <input name="dataE" id="dataE" on:keyup={setDataE} placeholder="dataE">
                 <br>
                 <label for="filme">Selecione o Filme</label>
-                <input name="filme" id="filme" list="filmes">
+                {filme}
+                <input name="filme" id="filme" list="filmes" on:keyup={setFilme} placeholder="filme">
                 <datalist id="filmes" >
                     <option value="valor1">Valor1</option>
                 </datalist>
-                <input type="button" id="botao" on:click="" value="Confirmar">
+                <input type="submit" id="botao" on:click="" value="Confirmar">
             </form>
         </fieldset>
     </aside>

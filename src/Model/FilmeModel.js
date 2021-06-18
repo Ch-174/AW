@@ -19,4 +19,4 @@ export default class Filme {
   getGenero() {return this.genero;}
   getDuracao() { return this.duracao;}
 }
-module.exports = { Filme,};
+//module.exports = { Filme,};

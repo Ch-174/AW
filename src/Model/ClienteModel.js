@@ -7,21 +7,44 @@ class Cliente{
     getNome(){return this.nome;}
 }
 export default class Associado extends Cliente{
-    constructor(empresa,nome, qntFilmes){
+    constructor(empresa,nome){
         super(nome);
         this.empresa = empresa;
-        this.qntFilmes = qntFilmes;
+        this.qntFilmes = 0;
     }
     getEmpresa() {return this.empresa;}
-    getQntFilmes() {return this.quantFilmes;}
+    getQntFilmes() {
+        const db = firebase.firestore();
+        var ref = db.collection("cliente");
+
+        var query = ref.where("nome", "==", this.getNome()).where("empresa", "==", this.getEmpresa());
+       query.get().then(snapshot => {
+        this.qntFilmes = snapshot[0].data().qtdFilme;
+        this.quantFilmes = this.qntFilmes + 1;
+      }).catch((error) => {
+            console.log("Error getting document:", error);
+        });
+        return docRef.update({
+            qtdFilme: this.qntFilmes,
+        })
+        .then(() => {
+            console.log("Document successfully updated!");
+        })
+        .catch((error) => {
+            
+            console.error("Error updating document: ", error);
+        });
+
+        return this.quantFilmes;}
 }
 export default class Nao_Associado extends Cliente{
-    constructor(sexo,nome,distribuicao,rua,casaNum){
+    constructor(sexo,nome,distribuicao,rua,casaNum,dataNas){
         super(nome);
         this.sexo = sexo;
         this.distribuicao = distribuicao;
         this.rua = rua;
         this.casaNum = casaNum;
+        this.dataNas = dataNas;
     }
     getSexo() {return this.sexo;}
     getEndereco() {return this.endereco;}
@@ -32,9 +55,8 @@ export default class Nao_Associado extends Cliente{
 
 import firebase from './firebase';
 
-// dentro da função classe ou obj
 
   const db = firebase.firestore();
-  const clientes = db.collection(nome).get().then(docs => docs.data()); // clientes será um array
+  const clientes = db.collection(nome).get().then(docs => docs.data()); 
 
 
