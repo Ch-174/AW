@@ -164,4 +164,17 @@ export default class Locacao {
         dataEntrega: new firebase.firestore.Timestamp(dataEntrega, 0),
       });
   }
+  static async listarLocacoes() {
+    const loc = [];
+    return firebase
+      .firestore()
+      .collection("aluguer")
+      .get()
+      .then((snapshot) => {
+        snapshot.forEach((doc) => {
+          loc.push(doc.data());
+        });
+        return loc;
+      });
+    }
 }

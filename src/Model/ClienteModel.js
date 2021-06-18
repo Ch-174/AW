@@ -23,6 +23,7 @@ export default class Cliente {
         return clientes;
       });
   }
+  
 }
 export class Associado extends Cliente {
   constructor(empresa, nome) {

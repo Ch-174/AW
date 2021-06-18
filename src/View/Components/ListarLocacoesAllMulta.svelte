@@ -1,3 +1,43 @@
+
+import {getLocacoesLista} from '../../Controllers/LocacaoController';
+<script>
+import { getClientesLista } from "../../Controllers/ClienteController";
+import { getLocacoesLista } from "../../Controllers/LocacaoController";
+import {getFilmeLista} from '../../Controllers/FilmeController';
+function filtrarLocacoes(){
+  const loc = [];
+  const auxL = [];
+var today = new Date();
+var dd = String(today.getDate()).padStart(2, '0');
+var mm = String(today.getMonth() + 1).padStart(2, '0'); //January is 0!
+var yyyy = today.getFullYear();
+
+today = mm + '/' + dd + '/' + yyyy;
+  auxL = getLocacoesLista();
+  if(auxL.dataEntrega > today){
+    loc = auxL;
+  }
+  return loc;
+}
+  const clientes ;
+  function listarClientesById(id){
+    
+    const clientesAux ;
+    clientesAux =getClientesLista();
+    if(id == clientesAux.id){
+      clientes = clientesAux;
+    }
+  }
+  const filmes ;
+  function listarFilmesByID(id){
+    const aux ;
+    clientesAux == getFilmeLista();
+    if(id = clientesAux.id){
+      clientes = clientesAux;
+    }
+  }
+</script>
+
 <body style="background-color: rgb(27, 8, 27);">
     <aside class = "listarL">
         <fieldset>
@@ -10,10 +50,25 @@
                         <th>Filme</th>
                         <th>Data do Aluguer</th>
                         <th>Data de Entrega</th>
-                        <th>Tipo</th>
                     </tr>
                 </thead>
-                <tbody></tbody>
+                <tbody>
+                  {#await filtrarLocacoes()}
+                 <!-- <td>Carregando...</td> -->
+                {:then locacoes} 
+                  {#each locacoes as locacao}
+              
+                    {listarFilmesByID(locacao.idF)}
+                      {listarClientesById(locacao.idC)}
+                    <tr>
+                      <td>{clientes.nome}</td>
+                      <td>{filmes.titulo}</td>
+                      <td>{locacao.dataAluguer}</td>
+                      <td>{locacao.dataEntrega}</td>
+                    </tr>
+                    {/each}
+                {/await}
+                </tbody>
             </table>
         </fieldset>
     </aside>

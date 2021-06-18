@@ -41,7 +41,7 @@ import { getClientesLista } from '../../Controllers/ClienteController';
                 <label for="filmes">Selecione o Filme</label>
                 <!-- svelte-ignore a11y-no-onchange -->
                 <select id="filmes" on:change={setFilme}>
-                  <option>Selecione filme</option>
+                  <option selected disabled>Selecione filme</option>
                   <option value="1">The witch</option>
                 </select>
                 <input type="submit" id="botao" value="Confirmar">
@@ -79,5 +79,8 @@ import { getClientesLista } from '../../Controllers/ClienteController';
 		background-color: rgb(51, 0, 43);;
         border-radius: 0.2rem;
         color: white;
+      }
+      option{
+        color: black;
       }
     </style>
