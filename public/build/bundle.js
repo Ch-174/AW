@@ -27383,8 +27383,8 @@ var app = (function () {
     			main = element("main");
     			create_component(router.$$.fragment);
     			attr_dev(main, "class", "svelte-z2h0n8");
-    			add_location(main, file, 5, 1, 135);
-    			add_location(body, file, 4, 0, 127);
+    			add_location(main, file, 5, 1, 122);
+    			add_location(body, file, 4, 0, 114);
     		},
     		l: function claim(nodes) {
     			throw new Error("options.hydrate only works if the component was compiled with the `hydratable: true` option");
@@ -27439,7 +27439,7 @@ var app = (function () {
     		if (!~writable_props.indexOf(key) && key.slice(0, 2) !== "$$") console.warn(`<App> was created with unknown prop '${key}'`);
     	});
 
-    	$$self.$capture_state = () => ({ Router, Link, Route, LeftSide, RightSide });
+    	$$self.$capture_state = () => ({ Router, LeftSide, RightSide });
     	return [];
     }
 
