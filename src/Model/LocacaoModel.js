@@ -62,7 +62,6 @@ export default class Locacao {
           console.error("Error updating document: ", error);
         });
     }
-<<<<<<< HEAD
 
     return id;
   }
@@ -165,54 +164,16 @@ export default class Locacao {
         dataEntrega: new firebase.firestore.Timestamp(dataEntrega, 0),
       });
   }
-=======
-     InserirLocacaoCA(empresa, nome) {
-
-        this.clienteA = Associado(empresa,nome);
-        if(this.ExistLocacaoCA(empresa,nome)){
-            this.clienteA.getQntFilmes();
-        }else{
-           const db = firebase.firestore();
-            db.collection("cliente").add({
-                associado: true,
-                empresa: this.clienteA.getEmpresa(),
-                id:this.getIdC() ,
-                nome: this.clienteA.getNome(),
-                qtdFilme: 1
-            })
-            .catch((error) => {
-                console.error("Error adding document: ", error);
-            }); 
-        }
-        
-    }
-    ExistLocacaoCA(empresa,nome){
-        let bol = false;
-        const db = firebase.firestore();
-        var ref = db.collection("cliente");
-        var query = ref.where("nome", "==", nome).where("empresa", "==", empresa);
-        query.get().then(snapshot => {
-            
-              bol = snapshot.doc.exists;
-              return bol;
-        }); 
-    }
-    InserirLocacaoCNA(nome,distribuicao,rua,casaNum,sexo){
-        this.clienteNA = new Nao_Associado(sexo,nome,distribuicao,rua,casaNum)
-        
-           const db = firebase.firestore();
-            db.collection("cliente").add({
-                casaNum: this.clienteNA.getCasaNum(),
-                distribuicao: this.clienteNA.getDistribuicao(),
-                nome: this.clienteNA.getNome(),
-                rua: this.clienteNA.getRua(),
-                id:this.getIdC() ,
-                nome: this.clienteA.getNome(),
-            })
-            .catch((error) => {
-                console.error("Error adding document: ", error);
-            }); 
-        
-    }
->>>>>>> e94aefd53f4274bb75da84f2b16832c5a0a520fb
+  static async listarLocacoes() {
+    const loc = [];
+    return firebase
+      .firestore()
+      .collection("aluguer")
+      .get()
+      .then((snapshot) => {
+        snapshot.forEach((doc) => {
+          loc.push(doc.data());
+        });
+        return loc;
+      });
 }

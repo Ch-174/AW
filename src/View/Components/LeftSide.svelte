@@ -22,18 +22,9 @@
 		<Link to="/">
 			<span>Dashboard</span>
 		</Link>
+		<Link to="/InserirLocacaoCliente">
 			<span on:click={handleInserirClick}>Inserir Locação</span>
-	
-		{#if clBool}
-				<section class="selecionar">
-					<Link to="/InserirLocacaoClienteA">
-						<span>Inserir Locação de Cliente Associado</span>
-					</Link>
-					<Link to="/InserirLocacaoClienteNA">
-						<span>Inserir Locação de Cliente Não-Associado</span>
-					</Link>
-				</section>	
-		{/if}
+		</Link>
 		
 		<Link to="/RetirarLocacao">
 			<span>Retirar Locação</span>
@@ -50,7 +41,7 @@
 					</Link>
 				</section>	
 		{/if}
-		<Link to="/">
+		<Link to="/ListarNAMulta">
 			<span>Listar Clientes Não-Associados com Multa</span>
 		</Link>
 	</nav>

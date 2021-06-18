@@ -4,12 +4,27 @@ import {getLocacoesLista} from '../../Controllers/LocacaoController';
 import { getClientesLista } from "../../Controllers/ClienteController";
 import { getLocacoesLista } from "../../Controllers/LocacaoController";
 import {getFilmeLista} from '../../Controllers/FilmeController';
-const clientes ;
+function filtrarLocacoes(){
+  const loc = [];
+  const auxL = [];
+var today = new Date();
+var dd = String(today.getDate()).padStart(2, '0');
+var mm = String(today.getMonth() + 1).padStart(2, '0'); //January is 0!
+var yyyy = today.getFullYear();
+
+today = mm + '/' + dd + '/' + yyyy;
+  auxL = getLocacoesLista();
+  if(auxL.dataEntrega > today){
+    loc = auxL;
+  }
+  return loc;
+}
+  const clientes ;
   function listarClientesById(id){
     
     const clientesAux ;
     clientesAux =getClientesLista();
-    if(id == clientesAux.id){
+    if(id == clientesAux.id && clientesAux.associado == false){
       clientes = clientesAux;
     }
   }
@@ -22,36 +37,37 @@ const clientes ;
     }
   }
 </script>
+
 <body style="background-color: rgb(27, 8, 27);">
     <aside class = "listarL">
         <fieldset>
-            <legend>Listar Locações</legend>
+            <legend>Listar Locações Com Multa</legend>
             <table>
                 <thead>
                     
                     <tr>
                         <th>Nome</th>
-                        <th>Titulo doFilme</th>
+                        <th>Filme</th>
                         <th>Data do Aluguer</th>
                         <th>Data de Entrega</th>
                     </tr>
                 </thead>
                 <tbody>
-                  {#await getLocacoesLista()}
-                    <!-- <td>Carregando...</td> -->
-                  {:then locacoes} 
-                    {#each locacoes as locacao}
-                
-                      {listarFilmesByID(locacao.idF)}
-                        {listarClientesById(locacao.idC)}
-                      <tr>
-                        <td>{clientes.nome}</td>
-                        <td>{filmes.titulo}</td>
-                        <td>{locacao.dataAluguer}</td>
-                        <td>{locacao.dataEntrega}</td>
-                      </tr>
-                      {/each}
-                  {/await}
+                  {#await filtrarLocacoes()}
+                 <!-- <td>Carregando...</td> -->
+                {:then locacoes} 
+                  {#each locacoes as locacao}
+              
+                    {listarFilmesByID(locacao.idF)}
+                      {listarClientesById(locacao.idC)}
+                    <tr>
+                      <td>{clientes.nome}</td>
+                      <td>{filmes.titulo}</td>
+                      <td>{locacao.dataAluguer}</td>
+                      <td>{locacao.dataEntrega}</td>
+                    </tr>
+                    {/each}
+                {/await}
                 </tbody>
             </table>
         </fieldset>
