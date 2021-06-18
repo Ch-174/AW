@@ -1,6 +1,5 @@
 import firebase from "../Model/Firebase";
 
-<<<<<<< HEAD
 export default class Cliente {
   constructor(nome) {
     listarClientes();
@@ -24,23 +23,6 @@ export default class Cliente {
         return clientes;
       });
   }
-=======
-        return this.quantFilmes;}
-}
-export class Nao_Associado extends Cliente{
-    constructor(sexo,nome,distribuicao,rua,casaNum){
-        super(nome);
-        this.sexo = sexo;
-        this.distribuicao = distribuicao;
-        this.rua = rua;
-        this.casaNum = casaNum;
-    }
-    getSexo() {return this.sexo;}
-    getEndereco() {return this.endereco;}
-    getDistribuicao() {return this.distribuicao;}
-    getRua() {return this.rua;}
-    getCasaNum() {return this.casaNum;}
->>>>>>> e94aefd53f4274bb75da84f2b16832c5a0a520fb
 }
 export class Associado extends Cliente {
   constructor(empresa, nome) {
