@@ -1,12 +1,9 @@
 <script>
-	import { AddLocacaoCA } from '../../Controllers/LocacaoController';
+import { getClientesLista } from '../../Controllers/ClienteController';
+	import { addLocacao } from '../../Controllers/LocacaoController';
 
-	let nome = '';
-	const setNome = (e) => nome = e.target.value;
-	let empresa = '';
-	const setEmpresa = (e) => {
-		empresa = e.target.value;
-	}
+	let idCliente = '';
+	const setIdCliente = (e) => idCliente = e.target.value;
   let dataE = '';
 	const setDataE = (e) => {
 		dataE = e.target.value;
@@ -15,39 +12,46 @@
 	const setFilme = (e) => {
 		filme= e.target.value;
 	}
-	const handleSubmit = () => AddLocacaoCA(filme,dataE,empresa, nome);
+
+	const handleSubmit = () => 
+    addLocacao(filme, dataE, idCliente);
 </script>
+
 <body style="background-color: rgb(27, 8, 27);">
     <aside class="InserirClienteA">
-        <fieldset>
-            <legend>Cliente Associado</legend>
-            <form name="clienteA" on:submit|preventDefault={handleSubmit}>
+          <fieldset>
+              <legend>Cliente Associado</legend>
+              <form name="clienteA" on:submit|preventDefault={handleSubmit}>
                 <label for="nome">Nome</label>
-                {nome}
-                <input name="nome" id="nome" on:keyup={setNome} placeholder="nome">
-                <br>
-                <label for="empresa">Empresa</label>
-                {empresa}
-                <input name="empresa" id="empresa" on:keyup={setEmpresa} placeholder="empresa">
-                <br>
+                <!-- svelte-ignore a11y-no-onchange -->
+                <select id="nome" on:change={setIdCliente}>
+                  <option selected disabled>Selecione o usário</option>
+                  {#await getClientesLista()}
+                    <option>Carregando...</option>
+                  {:then clientes} 
+                    {#each clientes as cliente}
+                      <option value={cliente.id}>{cliente.nome} - {cliente.associado ? 'A' : 'NA'}</option>
+                    {/each}
+                  {/await}
+                </select>
+              
                 <label for="dataE">Data de entrega</label>
-                <label for="dataE">Formato:December 10, 1815 </label> 
-                {dataE}
-                <input name="dataE" id="dataE" on:keyup={setDataE} placeholder="dataE">
+                <input type="date" name="dataE" id="dataE" on:change={setDataE} placeholder="December 10, 1815">
                 <br>
-                <label for="filme">Selecione o Filme</label>
-                {filme}
-                <input name="filme" id="filme" list="filmes" on:keyup={setFilme} placeholder="filme">
-                <datalist id="filmes" >
-                    <option value="valor1">Valor1</option>
-                </datalist>
-                <input type="submit" id="botao" on:click="" value="Confirmar">
+                <label for="filmes">Selecione o Filme</label>
+                <!-- svelte-ignore a11y-no-onchange -->
+                <select id="filmes" on:change={setFilme}>
+                  <option>Selecione filme</option>
+                  <option value="1">The witch</option>
+                </select>
+                <input type="submit" id="botao" value="Confirmar">
             </form>
         </fieldset>
     </aside>
-    </body>
-    <style>
-         .InserirClienteA {
+</body>
+
+<style>
+    .InserirClienteA {
        
         padding: 1rem 2rem;
         margin: 5rem 2rem;
@@ -56,6 +60,9 @@
         align-items: stretch;
         color: white;
         font-weight: 600;
+      }
+      select{
+        color: black;
       }
       label{
         background-color: rgb(146, 1, 122);
@@ -71,5 +78,6 @@
       #botao{
 		background-color: rgb(51, 0, 43);;
         border-radius: 0.2rem;
+        color: white;
       }
     </style>

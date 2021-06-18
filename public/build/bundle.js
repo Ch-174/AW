@@ -10,6 +10,9 @@ var app = (function () {
             tar[k] = src[k];
         return tar;
     }
+    function is_promise(value) {
+        return value && typeof value === 'object' && typeof value.then === 'function';
+    }
     function add_location(element, file, line, column, char) {
         element.__svelte_meta = {
             loc: { file, line, column, char }
@@ -113,6 +116,12 @@ var app = (function () {
     }
     function detach(node) {
         node.parentNode.removeChild(node);
+    }
+    function destroy_each(iterations, detaching) {
+        for (let i = 0; i < iterations.length; i += 1) {
+            if (iterations[i])
+                iterations[i].d(detaching);
+        }
     }
     function element(name) {
         return document.createElement(name);
@@ -326,6 +335,88 @@ var app = (function () {
         }
     }
 
+    function handle_promise(promise, info) {
+        const token = info.token = {};
+        function update(type, index, key, value) {
+            if (info.token !== token)
+                return;
+            info.resolved = value;
+            let child_ctx = info.ctx;
+            if (key !== undefined) {
+                child_ctx = child_ctx.slice();
+                child_ctx[key] = value;
+            }
+            const block = type && (info.current = type)(child_ctx);
+            let needs_flush = false;
+            if (info.block) {
+                if (info.blocks) {
+                    info.blocks.forEach((block, i) => {
+                        if (i !== index && block) {
+                            group_outros();
+                            transition_out(block, 1, 1, () => {
+                                if (info.blocks[i] === block) {
+                                    info.blocks[i] = null;
+                                }
+                            });
+                            check_outros();
+                        }
+                    });
+                }
+                else {
+                    info.block.d(1);
+                }
+                block.c();
+                transition_in(block, 1);
+                block.m(info.mount(), info.anchor);
+                needs_flush = true;
+            }
+            info.block = block;
+            if (info.blocks)
+                info.blocks[index] = block;
+            if (needs_flush) {
+                flush();
+            }
+        }
+        if (is_promise(promise)) {
+            const current_component = get_current_component();
+            promise.then(value => {
+                set_current_component(current_component);
+                update(info.then, 1, info.value, value);
+                set_current_component(null);
+            }, error => {
+                set_current_component(current_component);
+                update(info.catch, 2, info.error, error);
+                set_current_component(null);
+                if (!info.hasCatch) {
+                    throw error;
+                }
+            });
+            // if we previously had a then/catch block, destroy it
+            if (info.current !== info.pending) {
+                update(info.pending, 0);
+                return true;
+            }
+        }
+        else {
+            if (info.current !== info.then) {
+                update(info.then, 1, info.value, promise);
+                return true;
+            }
+            info.resolved = promise;
+        }
+    }
+    function update_await_block_branch(info, ctx, dirty) {
+        const child_ctx = ctx.slice();
+        const { resolved } = info;
+        if (info.current === info.then) {
+            child_ctx[info.value] = resolved;
+        }
+        if (info.current === info.catch) {
+            child_ctx[info.error] = resolved;
+        }
+        info.block.p(child_ctx, dirty);
+    }
+
     function get_spread_update(levels, updates) {
         const update = {};
         const to_null_out = {};
@@ -530,6 +621,15 @@ var app = (function () {
             return;
         dispatch_dev('SvelteDOMSetData', { node: text, data });
         text.data = data;
+    }
+    function validate_each_argument(arg) {
+        if (typeof arg !== 'string' && !(arg && typeof arg === 'object' && 'length' in arg)) {
+            let msg = '{#each} only iterates over array-like objects.';
+            if (typeof Symbol === 'function' && arg && Symbol.iterator in arg) {
+                msg += ' You can use a spread to convert this iterable into an array.';
+            }
+            throw new Error(msg);
+        }
     }
     function validate_slots(name, slot, keys) {
         for (const slot_key of Object.keys(slot)) {
@@ -3841,63 +3941,6 @@ var app = (function () {
     	}
     }
 
-    class Filme {
-      constructor(filme){
-        this.nome = filme.getNome();
-        this.ano = filme.getAno();
-          this.genero = filme.getGenero();
-          this.duracao = filme.getDuracao();
-      }
-      getNome() {return this.nome;}
-      getAno() {return this.ano;}
-      getGenero() {return this.genero;}
-      getDuracao() { return this.duracao;}
-    }
-    //module.exports = { Filme,};
-
-    class Cliente{
-        constructor (nome){
-            this.nome = nome;
-        }
-        getNome(){return this.nome;}
-    }
-    class Associado extends Cliente{
-        constructor(empresa,nome){
-            super(nome);
-            this.empresa = empresa;
-            this.qntFilmes = 0;
-        }
-        getEmpresa() {return this.empresa;}
-        getQntFilmes() {
-            const db = firebase.firestore();
-            var ref = db.collection("cliente");
-
-            var query = ref.where("nome", "==", this.getNome()).where("empresa", "==", this.getEmpresa());
-           query.get().then(snapshot => {
-            this.qntFilmes = snapshot[0].data().qtdFilme;
-            this.quantFilmes = this.qntFilmes + 1;
-          }).catch((error) => {
-                console.log("Error getting document:", error);
-            });
-            return docRef.update({
-                qtdFilme: this.qntFilmes,
-            })
-            .then(() => {
-                console.log("Document successfully updated!");
-            })
-            .catch((error) => {
-                
-                console.error("Error updating document: ", error);
-            });
-    }
-    }
-
-    // import firebase from './firebase';
-
-
-    //   const db = firebase.firestore();
-    //   const clientes = db.collection(nome).get().then(docs => docs.data());
-
     /*! *****************************************************************************
     Copyright (c) Microsoft Corporation.
 
@@ -6133,7 +6176,7 @@ var app = (function () {
         }
         return namespace;
     }
-    var firebase$1 = createFirebaseNamespace();
+    var firebase = createFirebaseNamespace();
 
     /**
      * @license
@@ -6239,11 +6282,11 @@ var app = (function () {
             logger.warn("\n    Warning: You are trying to load Firebase while using Firebase Performance standalone script.\n    You should load Firebase Performance with this instance of Firebase to avoid loading duplicate code.\n    ");
         }
     }
-    var initializeApp = firebase$1.initializeApp;
+    var initializeApp = firebase.initializeApp;
     // TODO: This disable can be removed and the 'ignoreRestArgs' option added to
     // the no-explicit-any rule when ESlint releases it.
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    firebase$1.initializeApp = function () {
+    firebase.initializeApp = function () {
         var args = [];
         for (var _i = 0; _i < arguments.length; _i++) {
             args[_i] = arguments[_i];
@@ -6256,8 +6299,8 @@ var app = (function () {
         }
         return initializeApp.apply(undefined, args);
     };
-    var firebase$1$1 = firebase$1;
-    registerCoreComponents(firebase$1$1);
+    var firebase$1 = firebase;
+    registerCoreComponents(firebase$1);
 
     /*! *****************************************************************************
     Copyright (c) Microsoft Corporation.
@@ -25495,7 +25538,7 @@ var app = (function () {
         })), e.registerVersion("@firebase/firestore", "2.3.6");
     }
 
-    P(firebase$1$1);
+    P(firebase$1);
 
     var name = "firebase";
     var version = "8.6.7";
@@ -25516,140 +25559,487 @@ var app = (function () {
      * See the License for the specific language governing permissions and
      * limitations under the License.
      */
-    firebase$1$1.registerVersion(name, version, 'app');
-    firebase$1$1.SDK_VERSION = version;
+    firebase$1.registerVersion(name, version, 'app');
+    firebase$1.SDK_VERSION = version;
 
     const firebaseConfig = {
-        apiKey: "AIzaSyB_C_JAp7CIIB0itKtc5_wW9bmfHo2I9Cc",
-        authDomain: "aluguerfilme.firebaseapp.com",
-        projectId: "aluguerfilme",
-        storageBucket: "aluguerfilme.appspot.com",
-        messagingSenderId: "422482778621",
-        appId: "1:422482778621:web:be635f59c8322779c8a194",
-        measurementId: "G-DZDEKRMDES"
-      };
+      apiKey: "AIzaSyB_C_JAp7CIIB0itKtc5_wW9bmfHo2I9Cc",
+      authDomain: "aluguerfilme.firebaseapp.com",
+      projectId: "aluguerfilme",
+      storageBucket: "aluguerfilme.appspot.com",
+      messagingSenderId: "422482778621",
+      appId: "1:422482778621:web:be635f59c8322779c8a194",
+    };
 
-    if (!firebase$1$1.app) firebase$1$1.initializeApp(firebaseConfig);
+    firebase$1.initializeApp(firebaseConfig);
 
-    class Locacao {
-         constructor(filme, dataAluguer,dataEntrega){
-            this.filme = new Filme(filme);
-            this.dataAluguer = dataAluguer;
-            this.dataEntrega = dataEntrega;
-         }
-        
-        getFilme() {return this.filme;}
-        getDataAluguer() {return this.dataAluguer;}
-        getDataEntrega() {return this.dataEntrega;}
-        getIdC(){
-            let bol = false;
-            const db = firebase$1$1.firestore();
-            var docRef = db.collection("id").doc("cliente");
-            let id = 0;
-            docRef.get().then((doc) => {
-                if (doc.exists) {
-                  id =  doc.data();
-                  id = id++;
-                  bol = true;
-                } else {
-                    id = 1;
-                    console.log("No such document!");
-                }
-            }).catch((error) => {
-                console.log("Error getting document:", error);
+    class Cliente {
+      constructor(nome) {
+        listarClientes();
+        this.nome = nome;
+      }
+
+      getNome() {
+        return this.nome;
+      }
+
+      static async listarClientes() {
+        const clientes = [];
+        return firebase$1
+          .firestore()
+          .collection("cliente")
+          .get()
+          .then((snapshot) => {
+            snapshot.forEach((doc) => {
+              clientes.push(doc.data());
             });
-            if(bol){
-              docRef.update({
-                id: id
-            })
-            .then(() => {
-                console.log("Document successfully updated!");
-            })
-            .catch((error) => {
-                
-                console.error("Error updating document: ", error);
-            });  
-            }
-             
-            return id;
-        }
-       
-        getIdF(nome){
-             let id = 0;
-            const db = firebase$1$1.firestore();
-            var docRef = db.collection("filme");
-            var query = docRef.where("nome", "==", nome);        query.get().then(snapshot => {
-                
-                   if (snapshot.doc.exists){
-                    id =   snapshot[0].data().id;
-                   } else {
-                       id = 1;
-                    console.log("No such document!");
-                   }
-                   
-            });
-             
-            return id;
-        }
-        InserirLocacao(){
-            const db = firebase$1$1.firestore();
-                db.collection("cliente").add({
-                    dataAluguer: firebase$1$1.firestore.Timestamp.now(),
-                    dataEntrega: firebase$1$1.firestore.Timestamp.fromDate(new Date(this.getDataEntrega())),
-                    idC: this.getIdC() ,
-                    idF: this.getIdF(this.getFilme())
-                })
-                .then((docRef) => {
-                    console.log("Document written with ID: ", docRef.id);
-                })
-                .catch((error) => {
-                    console.error("Error adding document: ", error);
-                }); 
-        }
-         InserirLocacaoCA(empresa, nome) {
+            return clientes;
+          });
+      }
+    }
+    class Associado extends Cliente {
+      constructor(empresa, nome) {
+        super(nome);
+        this.empresa = empresa;
+        this.qntFilmes = 0;
+      }
 
-            this.clienteA = Associado(empresa,nome);
-            if(this.ExistLocacaoCA(empresa,nome)){
-                this.clienteA.getQntFilmes();
-            }else {
-               const db = firebase$1$1.firestore();
-                db.collection("cliente").add({
-                    associado: true,
-                    empresa: this.clienteA.getEmpresa(),
-                    id:this.getIdC() ,
-                    nome: this.clienteA.getNome(),
-                    qtdFilme: 1
-                })
-                .then((docRef) => {
-                    console.log("Document written with ID: ", docRef.id);
-                })
-                .catch((error) => {
-                    console.error("Error adding document: ", error);
-                }); 
-            }
-            
-        }
-        ExistLocacaoCA(empresa,nome){
-            let bol = false;
-            const db = firebase$1$1.firestore();
-            var ref = db.collection("cliente");
-            var query = ref.where("nome", "==", nome).where("empresa", "==", empresa);
-            query.get().then(snapshot => {
-                
-                  bol = snapshot.doc.exists;
-                  return bol;
-            }); 
-        }
+      getUserIdPorNomeEmpresa(nome, empresa) {
+        firebase$1
+          .firestore()
+          .collection("cliente")
+          .where("nome", "==", nome)
+          .where("empresa", "==", empresa)
+          .get()
+          .then();
+      }
+
+      getEmpresa() {
+        return this.empresa;
+      }
+
+      getQntFilmes() {
+        const db = firebase$1.firestore();
+        var ref = db.collection("cliente");
+
+        var query = ref
+          .where("nome", "==", this.getNome())
+          .where("empresa", "==", this.getEmpresa());
+        query
+          .get()
+          .then((snapshot) => {
+            this.qntFilmes = snapshot[0].data().qtdFilme;
+            this.quantFilmes = this.qntFilmes + 1;
+          })
+          .catch((error) => {
+            console.log("Error getting document:", error);
+          });
+        return docRef
+          .update({
+            qtdFilme: this.qntFilmes,
+          })
+          .then(() => {
+            console.log("Document successfully updated!");
+          })
+          .catch((error) => {
+            console.error("Error updating document: ", error);
+          });
+      }
+    }
+    class Nao_Associado extends Cliente {
+      constructor(sexo, nome, distribuicao, rua, casaNum) {
+        super(nome);
+        this.sexo = sexo;
+        this.distribuicao = distribuicao;
+        this.rua = rua;
+        this.casaNum = casaNum;
+      }
+      getSexo() {
+        return this.sexo;
+      }
+      getEndereco() {
+        return this.endereco;
+      }
+      getDistribuicao() {
+        return this.distribuicao;
+      }
+      getRua() {
+        return this.rua;
+      }
+      getCasaNum() {
+        return this.casaNum;
+      }
     }
 
-    function AddLocacaoCA(filme, dataAluguer,dataEntrega,empresa, nome){
+    const getClientesLista = async () => {
+      return Cliente.listarClientes();
+    };
+
+    class Filme {
+      constructor(filme){
+        this.nome = filme.getNome();
+        this.ano = filme.getAno();
+        this.genero = filme.getGenero();
+        this.duracao = filme.getDuracao();
+      }
+
+      getNome() {return this.nome;}
+      getAno() {return this.ano;}
+      getGenero() {return this.genero;}
+      getDuracao() { return this.duracao;}
+
+      static async listarFilmes() {
+        let filmes = [];
+        const db = firebase$1.firestore();
+        db.collection('filme').get().then(snapshot => {
+          snapshot.forEach(doc => {
+            filmes.push(doc.data());
+          });
+          alert(JSON.stringify(filmes));
+        });
+        
+        
+        return filmes;
+      }
+    }
+
+    class Locacao {
+      idCliente;
+
+      constructor(filme, dataAluguer, dataEntrega) {
+        this.filme = new Filme(filme);
+        this.dataAluguer = dataAluguer;
+        this.dataEntrega = dataEntrega;
+      }
+
+      getFilme() {
+        return this.filme;
+      }
+
+      getDataAluguer() {
+        return this.dataAluguer;
+      }
+
+      getDataEntrega() {
+        return this.dataEntrega;
+      }
+
+      static inserirCliente() {}
+
+      static inserirLocacao() {
+        idc = this.idCliente;
+      }
+
+      getIdC() {
+        let bol = false;
+        const db = firebase$1.firestore();
+        var docRef = db.collection("id").doc("cliente");
+        let id = 0;
+
+        docRef
+          .get()
+          .then((doc) => {
+            if (doc.exists) {
+              id = doc.data();
+              id = id++;
+              bol = true;
+            } else {
+              id = 1;
+              console.log("No such document!");
+            }
+          })
+          .catch((error) => {
+            console.log("Error getting document:", error);
+          });
+        if (bol) {
+          docRef
+            .update({
+              id: id,
+            })
+            .then(() => {
+              console.log("Document successfully updated!");
+            })
+            .catch((error) => {
+              console.error("Error updating document: ", error);
+            });
+        }
+
+        return id;
+      }
+
+      getIdF(nome) {
+        let id = 0;
+        const db = firebase$1.firestore();
+        var docRef = db.collection("filme");
+        var query = docRef.where("nome", "==", nome);
+        query.get().then((snapshot) => {
+          if (snapshot.doc.exists) {
+            id = snapshot[0].data().id;
+          } else {
+            id = 1;
+            console.log("No such document!");
+          }
+        });
+
+        return id;
+      }
+      InserirLocacao() {
+        const db = firebase$1.firestore();
+        db.collection("cliente")
+          .add({
+            dataAluguer: firebase$1.firestore.Timestamp.now(),
+            dataEntrega: firebase$1.firestore.Timestamp.fromDate(
+              new Date(this.getDataEntrega())
+            ),
+            idC: this.idCliente,
+            idF: this.getIdF(this.getFilme()),
+          })
+          .then((docRef) => {
+            console.log("Document written with ID: ", docRef.id);
+          })
+          .catch((error) => {
+            console.error("Error adding document: ", error);
+          });
+      }
+
+      InserirLocacaoCA(empresa, nome) {
+        this.clienteA = Associado(empresa, nome);
+        if (this.ExistLocacaoCA(empresa, nome)) {
+          this.clienteA.getQntFilmes();
+        } else {
+          this.idCliente = this.getIdC();
+          const db = firebase$1.firestore();
+          db.collection("cliente")
+            .add({
+              associado: true,
+              empresa: this.clienteA.getEmpresa(),
+              id: this.idCliente,
+              nome: this.clienteA.getNome(),
+              qtdFilme: 1,
+            })
+            .catch((error) => {
+              console.error("Error adding document: ", error);
+            });
+        }
+      }
+
+      ExistLocacaoCA(empresa, nome) {
+        let bol = false;
+        const db = firebase$1.firestore();
+        var ref = db.collection("cliente");
+        var query = ref.where("nome", "==", nome).where("empresa", "==", empresa);
+        query.get().then((snapshot) => {
+          bol = snapshot.doc.exists;
+          return bol;
+        });
+      }
+
+      InserirLocacaoCNA(nome, distribuicao, rua, casaNum, sexo) {
+        this.clienteNA = new Nao_Associado(sexo, nome, distribuicao, rua, casaNum);
+
+        const db = firebase$1.firestore();
+        db.collection("cliente")
+          .add({
+            casaNum: this.clienteNA.getCasaNum(),
+            distribuicao: this.clienteNA.getDistribuicao(),
+            nome: this.clienteNA.getNome(),
+            rua: this.clienteNA.getRua(),
+            id: this.getIdC(),
+            nome: this.clienteA.getNome(),
+          })
+          .catch((error) => {
+            console.error("Error adding document: ", error);
+          });
+      }
+
+      static inserirLocacaoCliente(idCliente, idFilme, dataEntrega) {
+        firebase$1
+          .firestore()
+          .collection("aluguer")
+          .add({
+            idC: idCliente,
+            idF: idFilme,
+            dataAluguer: firebase$1.firestore.Timestamp.now(),
+            dataEntrega: new firebase$1.firestore.Timestamp(dataEntrega, 0),
+          });
+      }
+    }
+
+    function AddLocacaoCNA(filme, dataAluguer,dataEntrega,nome,distribuicao,rua,casaNum,sexo){
         let loc = new Locacao(filme,dataAluguer,dataEntrega);
-        loc.InserirLocacaoCA(empresa, nome) ;
+        loc.InserirLocacaoCNA(nome,distribuicao,rua,casaNum,sexo);
         loc.InserirLocacao();
     }
 
+    const addLocacao = (idFilme, dataAluguer, idCliente) => {
+        Locacao.inserirLocacaoCliente(idCliente, idFilme, new Date(dataAluguer).getTime() / 1000);
+    };
+
     /* src/View/Components/InserirLocacaoClienteA.svelte generated by Svelte v3.38.2 */
     const file$6 = "src/View/Components/InserirLocacaoClienteA.svelte";
+
+    function get_each_context(ctx, list, i) {
+    	const child_ctx = ctx.slice();
+    	child_ctx[8] = list[i];
+    	return child_ctx;
+    }
+
+    // (1:0) <script> import { getClientesLista }
+    function create_catch_block(ctx) {
+    	const block = { c: noop$1, m: noop$1, p: noop$1, d: noop$1 };
+
+    	dispatch_dev("SvelteRegisterBlock", {
+    		block,
+    		id: create_catch_block.name,
+    		type: "catch",
+    		source: "(1:0) <script> import { getClientesLista }",
+    		ctx
+    	});
+
+    	return block;
+    }
+
+    // (31:18) {:then clientes}
+    function create_then_block(ctx) {
+    	let each_1_anchor;
+    	let each_value = /*clientes*/ ctx[7];
+    	validate_each_argument(each_value);
+    	let each_blocks = [];
+
+    	for (let i = 0; i < each_value.length; i += 1) {
+    		each_blocks[i] = create_each_block(get_each_context(ctx, each_value, i));
+    	}
+
+    	const block = {
+    		c: function create() {
+    			for (let i = 0; i < each_blocks.length; i += 1) {
+    				each_blocks[i].c();
+    			}
+
+    			each_1_anchor = empty();
+    		},
+    		m: function mount(target, anchor) {
+    			for (let i = 0; i < each_blocks.length; i += 1) {
+    				each_blocks[i].m(target, anchor);
+    			}
+
+    			insert_dev(target, each_1_anchor, anchor);
+    		},
+    		p: function update(ctx, dirty) {
+    			if (dirty & /*getClientesLista*/ 0) {
+    				each_value = /*clientes*/ ctx[7];
+    				validate_each_argument(each_value);
+    				let i;
+
+    				for (i = 0; i < each_value.length; i += 1) {
+    					const child_ctx = get_each_context(ctx, each_value, i);
+
+    					if (each_blocks[i]) {
+    						each_blocks[i].p(child_ctx, dirty);
+    					} else {
+    						each_blocks[i] = create_each_block(child_ctx);
+    						each_blocks[i].c();
+    						each_blocks[i].m(each_1_anchor.parentNode, each_1_anchor);
+    					}
+    				}
+
+    				for (; i < each_blocks.length; i += 1) {
+    					each_blocks[i].d(1);
+    				}
+
+    				each_blocks.length = each_value.length;
+    			}
+    		},
+    		d: function destroy(detaching) {
+    			destroy_each(each_blocks, detaching);
+    			if (detaching) detach_dev(each_1_anchor);
+    		}
+    	};
+
+    	dispatch_dev("SvelteRegisterBlock", {
+    		block,
+    		id: create_then_block.name,
+    		type: "then",
+    		source: "(31:18) {:then clientes}",
+    		ctx
+    	});
+
+    	return block;
+    }
+
+    // (32:20) {#each clientes as cliente}
+    function create_each_block(ctx) {
+    	let option;
+    	let t0_value = /*cliente*/ ctx[8].nome + "";
+    	let t0;
+    	let t1;
+    	let t2_value = (/*cliente*/ ctx[8].associado ? "A" : "NA") + "";
+    	let t2;
+
+    	const block = {
+    		c: function create() {
+    			option = element("option");
+    			t0 = text(t0_value);
+    			t1 = text(" - ");
+    			t2 = text(t2_value);
+    			option.__value = /*cliente*/ ctx[8].id;
+    			option.value = option.__value;
+    			add_location(option, file$6, 32, 22, 1126);
+    		},
+    		m: function mount(target, anchor) {
+    			insert_dev(target, option, anchor);
+    			append_dev(option, t0);
+    			append_dev(option, t1);
+    			append_dev(option, t2);
+    		},
+    		p: noop$1,
+    		d: function destroy(detaching) {
+    			if (detaching) detach_dev(option);
+    		}
+    	};
+
+    	dispatch_dev("SvelteRegisterBlock", {
+    		block,
+    		id: create_each_block.name,
+    		type: "each",
+    		source: "(32:20) {#each clientes as cliente}",
+    		ctx
+    	});
+
+    	return block;
+    }
+
+    // (29:45)                      <option>Carregando...</option>                   {:then clientes}
+    function create_pending_block(ctx) {
+    	let option;
+
+    	const block = {
+    		c: function create() {
+    			option = element("option");
+    			option.textContent = "Carregando...";
+    			option.__value = "Carregando...";
+    			option.value = option.__value;
+    			add_location(option, file$6, 29, 20, 989);
+    		},
+    		m: function mount(target, anchor) {
+    			insert_dev(target, option, anchor);
+    		},
+    		p: noop$1,
+    		d: function destroy(detaching) {
+    			if (detaching) detach_dev(option);
+    		}
+    	};
+
+    	dispatch_dev("SvelteRegisterBlock", {
+    		block,
+    		id: create_pending_block.name,
+    		type: "pending",
+    		source: "(29:45)                      <option>Carregando...</option>                   {:then clientes}",
+    		ctx
+    	});
+
+    	return block;
+    }
 
     function create_fragment$6(ctx) {
     	let body;
@@ -25660,42 +26050,37 @@ var app = (function () {
     	let form;
     	let label0;
     	let t3;
-    	let t4;
+    	let select0;
+    	let option0;
     	let t5;
-    	let input0;
-    	let t6;
-    	let br0;
-    	let t7;
     	let label1;
+    	let t7;
+    	let input0;
+    	let t8;
+    	let br;
     	let t9;
-    	let t10;
-    	let t11;
-    	let input1;
-    	let t12;
-    	let br1;
-    	let t13;
     	let label2;
-    	let t15;
-    	let label3;
-    	let t17;
-    	let t18;
-    	let t19;
-    	let input2;
-    	let t20;
-    	let br2;
-    	let t21;
-    	let label4;
-    	let t23;
-    	let t24;
-    	let t25;
-    	let input3;
-    	let t26;
-    	let datalist;
-    	let option;
-    	let t28;
-    	let input4;
+    	let t11;
+    	let select1;
+    	let option1;
+    	let option2;
+    	let t14;
+    	let input1;
     	let mounted;
     	let dispose;
+
+    	let info = {
+    		ctx,
+    		current: null,
+    		token: null,
+    		hasCatch: false,
+    		pending: create_pending_block,
+    		then: create_then_block,
+    		catch: create_catch_block,
+    		value: 7
+    	};
+
+    	handle_promise(getClientesLista(), info);
 
     	const block = {
     		c: function create() {
@@ -25709,99 +26094,74 @@ var app = (function () {
     			label0 = element("label");
     			label0.textContent = "Nome";
     			t3 = space();
-    			t4 = text(/*nome*/ ctx[0]);
+    			select0 = element("select");
+    			option0 = element("option");
+    			option0.textContent = "Selecione o usário";
+    			info.block.c();
     			t5 = space();
-    			input0 = element("input");
-    			t6 = space();
-    			br0 = element("br");
-    			t7 = space();
     			label1 = element("label");
-    			label1.textContent = "Empresa";
+    			label1.textContent = "Data de entrega";
+    			t7 = space();
+    			input0 = element("input");
+    			t8 = space();
+    			br = element("br");
     			t9 = space();
-    			t10 = text(/*empresa*/ ctx[1]);
-    			t11 = space();
-    			input1 = element("input");
-    			t12 = space();
-    			br1 = element("br");
-    			t13 = space();
     			label2 = element("label");
-    			label2.textContent = "Data de entrega";
-    			t15 = space();
-    			label3 = element("label");
-    			label3.textContent = "Formato:December 10, 1815";
-    			t17 = space();
-    			t18 = text(/*dataE*/ ctx[2]);
-    			t19 = space();
-    			input2 = element("input");
-    			t20 = space();
-    			br2 = element("br");
-    			t21 = space();
-    			label4 = element("label");
-    			label4.textContent = "Selecione o Filme";
-    			t23 = space();
-    			t24 = text(/*filme*/ ctx[3]);
-    			t25 = space();
-    			input3 = element("input");
-    			t26 = space();
-    			datalist = element("datalist");
-    			option = element("option");
-    			option.textContent = "Valor1";
-    			t28 = space();
-    			input4 = element("input");
-    			add_location(legend, file$6, 22, 12, 563);
+    			label2.textContent = "Selecione o Filme";
+    			t11 = space();
+    			select1 = element("select");
+    			option1 = element("option");
+    			option1.textContent = "Selecione filme";
+    			option2 = element("option");
+    			option2.textContent = "The witch";
+    			t14 = space();
+    			input1 = element("input");
+    			add_location(legend, file$6, 22, 14, 576);
     			attr_dev(label0, "for", "nome");
-    			attr_dev(label0, "class", "svelte-rulzvb");
-    			add_location(label0, file$6, 24, 16, 689);
-    			attr_dev(input0, "name", "nome");
-    			attr_dev(input0, "id", "nome");
-    			attr_dev(input0, "placeholder", "nome");
-    			add_location(input0, file$6, 26, 16, 759);
-    			add_location(br0, file$6, 27, 16, 843);
-    			attr_dev(label1, "for", "empresa");
-    			attr_dev(label1, "class", "svelte-rulzvb");
-    			add_location(label1, file$6, 28, 16, 864);
-    			attr_dev(input1, "name", "empresa");
-    			attr_dev(input1, "id", "empresa");
-    			attr_dev(input1, "placeholder", "empresa");
-    			add_location(input1, file$6, 30, 16, 943);
-    			add_location(br1, file$6, 31, 16, 1039);
-    			attr_dev(label2, "for", "dataE");
-    			attr_dev(label2, "class", "svelte-rulzvb");
-    			add_location(label2, file$6, 32, 16, 1060);
-    			attr_dev(label3, "for", "dataE");
-    			attr_dev(label3, "class", "svelte-rulzvb");
-    			add_location(label3, file$6, 33, 16, 1119);
-    			attr_dev(input2, "name", "dataE");
-    			attr_dev(input2, "id", "dataE");
-    			attr_dev(input2, "placeholder", "dataE");
-    			add_location(input2, file$6, 35, 16, 1214);
-    			add_location(br2, file$6, 36, 16, 1302);
-    			attr_dev(label4, "for", "filme");
-    			attr_dev(label4, "class", "svelte-rulzvb");
-    			add_location(label4, file$6, 37, 16, 1323);
-    			attr_dev(input3, "name", "filme");
-    			attr_dev(input3, "id", "filme");
-    			attr_dev(input3, "list", "filmes");
-    			attr_dev(input3, "placeholder", "filme");
-    			add_location(input3, file$6, 39, 16, 1408);
-    			option.__value = "valor1";
-    			option.value = option.__value;
-    			add_location(option, file$6, 41, 20, 1554);
-    			attr_dev(datalist, "id", "filmes");
-    			add_location(datalist, file$6, 40, 16, 1510);
-    			attr_dev(input4, "type", "submit");
-    			attr_dev(input4, "id", "botao");
-    			input4.value = "Confirmar";
-    			attr_dev(input4, "class", "svelte-rulzvb");
-    			add_location(input4, file$6, 43, 16, 1637);
+    			attr_dev(label0, "class", "svelte-195masv");
+    			add_location(label0, file$6, 24, 16, 704);
+    			option0.selected = true;
+    			option0.disabled = true;
+    			option0.__value = "Selecione o usário";
+    			option0.value = option0.__value;
+    			add_location(option0, file$6, 27, 18, 869);
+    			attr_dev(select0, "id", "nome");
+    			attr_dev(select0, "class", "svelte-195masv");
+    			add_location(select0, file$6, 26, 16, 807);
+    			attr_dev(label1, "for", "dataE");
+    			attr_dev(label1, "class", "svelte-195masv");
+    			add_location(label1, file$6, 37, 16, 1324);
+    			attr_dev(input0, "type", "date");
+    			attr_dev(input0, "name", "dataE");
+    			attr_dev(input0, "id", "dataE");
+    			attr_dev(input0, "placeholder", "December 10, 1815");
+    			add_location(input0, file$6, 38, 16, 1383);
+    			add_location(br, file$6, 39, 16, 1496);
+    			attr_dev(label2, "for", "filmes");
+    			attr_dev(label2, "class", "svelte-195masv");
+    			add_location(label2, file$6, 40, 16, 1517);
+    			option1.__value = "Selecione filme";
+    			option1.value = option1.__value;
+    			add_location(option1, file$6, 43, 18, 1695);
+    			option2.__value = "1";
+    			option2.value = option2.__value;
+    			add_location(option2, file$6, 44, 18, 1746);
+    			attr_dev(select1, "id", "filmes");
+    			attr_dev(select1, "class", "svelte-195masv");
+    			add_location(select1, file$6, 42, 16, 1635);
+    			attr_dev(input1, "type", "submit");
+    			attr_dev(input1, "id", "botao");
+    			input1.value = "Confirmar";
+    			attr_dev(input1, "class", "svelte-195masv");
+    			add_location(input1, file$6, 46, 16, 1825);
     			attr_dev(form, "name", "clienteA");
-    			add_location(form, file$6, 23, 12, 610);
-    			attr_dev(fieldset, "class", "svelte-rulzvb");
-    			add_location(fieldset, file$6, 21, 8, 540);
-    			attr_dev(aside, "class", "InserirClienteA svelte-rulzvb");
-    			add_location(aside, file$6, 20, 4, 500);
+    			add_location(form, file$6, 23, 14, 625);
+    			attr_dev(fieldset, "class", "svelte-195masv");
+    			add_location(fieldset, file$6, 21, 10, 551);
+    			attr_dev(aside, "class", "InserirClienteA svelte-195masv");
+    			add_location(aside, file$6, 20, 4, 509);
     			set_style(body, "background-color", "rgb(27, 8, 27)");
-    			add_location(body, file$6, 19, 0, 447);
+    			add_location(body, file$6, 19, 0, 456);
     		},
     		l: function claim(nodes) {
     			throw new Error("options.hydrate only works if the component was compiled with the `hydratable: true` option");
@@ -25815,64 +26175,48 @@ var app = (function () {
     			append_dev(fieldset, form);
     			append_dev(form, label0);
     			append_dev(form, t3);
-    			append_dev(form, t4);
+    			append_dev(form, select0);
+    			append_dev(select0, option0);
+    			info.block.m(select0, info.anchor = null);
+    			info.mount = () => select0;
+    			info.anchor = null;
     			append_dev(form, t5);
-    			append_dev(form, input0);
-    			append_dev(form, t6);
-    			append_dev(form, br0);
-    			append_dev(form, t7);
     			append_dev(form, label1);
+    			append_dev(form, t7);
+    			append_dev(form, input0);
+    			append_dev(form, t8);
+    			append_dev(form, br);
     			append_dev(form, t9);
-    			append_dev(form, t10);
-    			append_dev(form, t11);
-    			append_dev(form, input1);
-    			append_dev(form, t12);
-    			append_dev(form, br1);
-    			append_dev(form, t13);
     			append_dev(form, label2);
-    			append_dev(form, t15);
-    			append_dev(form, label3);
-    			append_dev(form, t17);
-    			append_dev(form, t18);
-    			append_dev(form, t19);
-    			append_dev(form, input2);
-    			append_dev(form, t20);
-    			append_dev(form, br2);
-    			append_dev(form, t21);
-    			append_dev(form, label4);
-    			append_dev(form, t23);
-    			append_dev(form, t24);
-    			append_dev(form, t25);
-    			append_dev(form, input3);
-    			append_dev(form, t26);
-    			append_dev(form, datalist);
-    			append_dev(datalist, option);
-    			append_dev(form, t28);
-    			append_dev(form, input4);
+    			append_dev(form, t11);
+    			append_dev(form, select1);
+    			append_dev(select1, option1);
+    			append_dev(select1, option2);
+    			append_dev(form, t14);
+    			append_dev(form, input1);
 
     			if (!mounted) {
     				dispose = [
-    					listen_dev(input0, "keyup", /*setNome*/ ctx[4], false, false, false),
-    					listen_dev(input1, "keyup", /*setEmpresa*/ ctx[5], false, false, false),
-    					listen_dev(input2, "keyup", /*setDataE*/ ctx[6], false, false, false),
-    					listen_dev(input3, "keyup", /*setFilme*/ ctx[7], false, false, false),
-    					listen_dev(input4, "click", /*click_handler*/ ctx[9], false, false, false),
-    					listen_dev(form, "submit", prevent_default(/*handleSubmit*/ ctx[8]), false, true, false)
+    					listen_dev(select0, "change", /*setIdCliente*/ ctx[0], false, false, false),
+    					listen_dev(input0, "change", /*setDataE*/ ctx[1], false, false, false),
+    					listen_dev(select1, "change", /*setFilme*/ ctx[2], false, false, false),
+    					listen_dev(form, "submit", prevent_default(/*handleSubmit*/ ctx[3]), false, true, false)
     				];
 
     				mounted = true;
     			}
     		},
-    		p: function update(ctx, [dirty]) {
-    			if (dirty & /*nome*/ 1) set_data_dev(t4, /*nome*/ ctx[0]);
-    			if (dirty & /*empresa*/ 2) set_data_dev(t10, /*empresa*/ ctx[1]);
-    			if (dirty & /*dataE*/ 4) set_data_dev(t18, /*dataE*/ ctx[2]);
-    			if (dirty & /*filme*/ 8) set_data_dev(t24, /*filme*/ ctx[3]);
+    		p: function update(new_ctx, [dirty]) {
+    			ctx = new_ctx;
+    			update_await_block_branch(info, ctx, dirty);
     		},
     		i: noop$1,
     		o: noop$1,
     		d: function destroy(detaching) {
     			if (detaching) detach_dev(body);
+    			info.block.d();
+    			info.token = null;
+    			info = null;
     			mounted = false;
     			run_all(dispose);
     		}
@@ -25892,43 +26236,32 @@ var app = (function () {
     function instance$6($$self, $$props, $$invalidate) {
     	let { $$slots: slots = {}, $$scope } = $$props;
     	validate_slots("InserirLocacaoClienteA", slots, []);
-    	let nome = "";
-    	const setNome = e => $$invalidate(0, nome = e.target.value);
-    	let empresa = "";
-
-    	const setEmpresa = e => {
-    		$$invalidate(1, empresa = e.target.value);
-    	};
-
+    	let idCliente = "";
+    	const setIdCliente = e => idCliente = e.target.value;
     	let dataE = "";
 
     	const setDataE = e => {
-    		$$invalidate(2, dataE = e.target.value);
+    		dataE = e.target.value;
     	};
 
     	let filme = "";
 
     	const setFilme = e => {
-    		$$invalidate(3, filme = e.target.value);
+    		filme = e.target.value;
     	};
 
-    	const handleSubmit = () => AddLocacaoCA(filme, dataE, empresa, nome);
+    	const handleSubmit = () => addLocacao(filme, dataE, idCliente);
     	const writable_props = [];
 
     	Object.keys($$props).forEach(key => {
     		if (!~writable_props.indexOf(key) && key.slice(0, 2) !== "$$") console.warn(`<InserirLocacaoClienteA> was created with unknown prop '${key}'`);
     	});
 
-    	function click_handler(event) {
-    		bubble($$self, event);
-    	}
-
     	$$self.$capture_state = () => ({
-    		AddLocacaoCA,
-    		nome,
-    		setNome,
-    		empresa,
-    		setEmpresa,
+    		getClientesLista,
+    		addLocacao,
+    		idCliente,
+    		setIdCliente,
     		dataE,
     		setDataE,
     		filme,
@@ -25937,28 +26270,16 @@ var app = (function () {
     	});
 
     	$$self.$inject_state = $$props => {
-    		if ("nome" in $$props) $$invalidate(0, nome = $$props.nome);
-    		if ("empresa" in $$props) $$invalidate(1, empresa = $$props.empresa);
-    		if ("dataE" in $$props) $$invalidate(2, dataE = $$props.dataE);
-    		if ("filme" in $$props) $$invalidate(3, filme = $$props.filme);
+    		if ("idCliente" in $$props) idCliente = $$props.idCliente;
+    		if ("dataE" in $$props) dataE = $$props.dataE;
+    		if ("filme" in $$props) filme = $$props.filme;
     	};
 
     	if ($$props && "$$inject" in $$props) {
     		$$self.$inject_state($$props.$$inject);
     	}
 
-    	return [
-    		nome,
-    		empresa,
-    		dataE,
-    		filme,
-    		setNome,
-    		setEmpresa,
-    		setDataE,
-    		setFilme,
-    		handleSubmit,
-    		click_handler
-    	];
+    	return [setIdCliente, setDataE, setFilme, handleSubmit];
     }
 
     class InserirLocacaoClienteA extends SvelteComponentDev {
@@ -25976,7 +26297,6 @@ var app = (function () {
     }
 
     /* src/View/Components/InserirLocacaoClienteNA.svelte generated by Svelte v3.38.2 */
-
     const file$5 = "src/View/Components/InserirLocacaoClienteNA.svelte";
 
     function create_fragment$5(ctx) {
@@ -26025,8 +26345,7 @@ var app = (function () {
     	let input4;
     	let t28;
     	let datalist;
-    	let option2;
-    	let t30;
+    	let t29;
     	let input5;
     	let mounted;
     	let dispose;
@@ -26066,7 +26385,7 @@ var app = (function () {
     			br3 = element("br");
     			t15 = space();
     			label2 = element("label");
-    			label2.textContent = "Distribuição";
+    			label2.textContent = "Distribuição/Distrito";
     			t17 = space();
     			input1 = element("input");
     			t18 = space();
@@ -26088,83 +26407,83 @@ var app = (function () {
     			input4 = element("input");
     			t28 = space();
     			datalist = element("datalist");
-    			option2 = element("option");
-    			option2.textContent = "Valor1";
-    			t30 = space();
+    			t29 = space();
     			input5 = element("input");
-    			add_location(legend, file$5, 3, 12, 117);
+    			add_location(legend, file$5, 34, 12, 799);
     			attr_dev(label0, "for", "nome");
-    			attr_dev(label0, "class", "svelte-6qwv35");
-    			add_location(label0, file$5, 5, 16, 222);
+    			attr_dev(label0, "class", "svelte-5x14ws");
+    			add_location(label0, file$5, 36, 16, 930);
     			attr_dev(input0, "name", "nome");
     			attr_dev(input0, "id", "nome");
-    			add_location(input0, file$5, 6, 16, 269);
-    			add_location(br0, file$5, 7, 16, 315);
+    			attr_dev(input0, "placeholder", "Nome");
+    			add_location(input0, file$5, 37, 16, 977);
+    			add_location(br0, file$5, 38, 16, 1061);
     			attr_dev(label1, "for", "sexo");
-    			attr_dev(label1, "class", "svelte-6qwv35");
-    			add_location(label1, file$5, 8, 16, 336);
+    			attr_dev(label1, "class", "svelte-5x14ws");
+    			add_location(label1, file$5, 39, 16, 1082);
     			option0.__value = "masculino";
     			option0.value = option0.__value;
-    			add_location(option0, file$5, 10, 20, 434);
+    			add_location(option0, file$5, 41, 20, 1230);
     			option1.__value = "femenino";
     			option1.value = option1.__value;
-    			add_location(option1, file$5, 11, 20, 499);
+    			add_location(option1, file$5, 42, 20, 1295);
     			attr_dev(select, "name", "sexo");
     			attr_dev(select, "id", "sexo");
-    			add_location(select, file$5, 9, 16, 383);
-    			add_location(br1, file$5, 13, 16, 584);
-    			add_location(br2, file$5, 14, 16, 605);
-    			add_location(span, file$5, 15, 16, 626);
-    			add_location(br3, file$5, 16, 16, 665);
+    			attr_dev(select, "placeholder", "Selecione o sexo");
+    			add_location(select, file$5, 40, 16, 1129);
+    			add_location(br1, file$5, 44, 16, 1380);
+    			add_location(br2, file$5, 45, 16, 1401);
+    			add_location(span, file$5, 46, 16, 1422);
+    			add_location(br3, file$5, 47, 16, 1461);
     			set_style(label2, "margin-top", "0%");
     			attr_dev(label2, "for", "distribuicao");
-    			attr_dev(label2, "class", "svelte-6qwv35");
-    			add_location(label2, file$5, 17, 16, 686);
+    			attr_dev(label2, "class", "svelte-5x14ws");
+    			add_location(label2, file$5, 48, 16, 1482);
     			attr_dev(input1, "name", "distribuicao");
     			attr_dev(input1, "id", "distribuicao");
-    			add_location(input1, file$5, 18, 16, 772);
+    			attr_dev(input1, "placeholder", "Distribuicao/Distrito");
+    			add_location(input1, file$5, 49, 16, 1577);
     			set_style(label3, "margin-top", "0%");
     			attr_dev(label3, "for", "rua");
-    			attr_dev(label3, "class", "svelte-6qwv35");
-    			add_location(label3, file$5, 19, 16, 834);
+    			attr_dev(label3, "class", "svelte-5x14ws");
+    			add_location(label3, file$5, 50, 16, 1703);
     			attr_dev(input2, "name", "rua");
     			attr_dev(input2, "id", "rua");
-    			add_location(input2, file$5, 20, 16, 902);
+    			attr_dev(input2, "placeholder", "Rua");
+    			add_location(input2, file$5, 51, 16, 1771);
     			set_style(label4, "margin-top", "0%");
     			attr_dev(label4, "for", "casaNum");
-    			attr_dev(label4, "class", "svelte-6qwv35");
-    			add_location(label4, file$5, 21, 16, 946);
+    			attr_dev(label4, "class", "svelte-5x14ws");
+    			add_location(label4, file$5, 52, 16, 1851);
     			attr_dev(input3, "name", "casaNum");
     			attr_dev(input3, "id", "CasaNum");
-    			add_location(input3, file$5, 22, 16, 1029);
-    			add_location(br4, file$5, 24, 16, 1082);
+    			attr_dev(input3, "placeholder", "Numero da casa");
+    			add_location(input3, file$5, 53, 16, 1934);
+    			add_location(br4, file$5, 55, 16, 2038);
     			attr_dev(label5, "for", "filme");
-    			attr_dev(label5, "class", "svelte-6qwv35");
-    			add_location(label5, file$5, 25, 16, 1103);
+    			attr_dev(label5, "class", "svelte-5x14ws");
+    			add_location(label5, file$5, 56, 16, 2059);
     			attr_dev(input4, "name", "filme");
     			attr_dev(input4, "id", "filme");
     			attr_dev(input4, "list", "filmes");
-    			attr_dev(input4, "class", "svelte-6qwv35");
-    			add_location(input4, file$5, 26, 16, 1164);
-    			option2.__value = "valor1";
-    			option2.value = option2.__value;
-    			add_location(option2, file$5, 28, 20, 1270);
+    			attr_dev(input4, "placeholder", "Selecione o filme");
+    			attr_dev(input4, "class", "svelte-5x14ws");
+    			add_location(input4, file$5, 57, 16, 2120);
     			attr_dev(datalist, "id", "filmes");
-    			add_location(datalist, file$5, 27, 16, 1226);
+    			add_location(datalist, file$5, 58, 16, 2234);
     			attr_dev(input5, "type", "button");
     			attr_dev(input5, "id", "botao");
     			input5.value = "Confirmar";
-    			attr_dev(input5, "class", "svelte-6qwv35");
-    			add_location(input5, file$5, 30, 16, 1353);
+    			attr_dev(input5, "class", "svelte-5x14ws");
+    			add_location(input5, file$5, 60, 16, 2302);
     			attr_dev(form, "name", "clienteNA");
-    			attr_dev(form, "method", "POST");
-    			add_location(form, file$5, 4, 12, 168);
-    			attr_dev(fieldset, "class", "svelte-6qwv35");
-    			add_location(fieldset, file$5, 2, 8, 94);
-    			attr_dev(aside, "class", "InserirClienteNA svelte-6qwv35");
-    			add_location(aside, file$5, 1, 4, 53);
+    			add_location(form, file$5, 35, 12, 850);
+    			attr_dev(fieldset, "class", "svelte-5x14ws");
+    			add_location(fieldset, file$5, 33, 8, 776);
+    			attr_dev(aside, "class", "InserirClienteNA svelte-5x14ws");
+    			add_location(aside, file$5, 32, 4, 735);
     			set_style(body, "background-color", "rgb(27, 8, 27)");
-    			add_location(body, file$5, 0, 0, 0);
+    			add_location(body, file$5, 31, 0, 682);
     		},
     		l: function claim(nodes) {
     			throw new Error("options.hydrate only works if the component was compiled with the `hydratable: true` option");
@@ -26215,12 +26534,21 @@ var app = (function () {
     			append_dev(form, input4);
     			append_dev(form, t28);
     			append_dev(form, datalist);
-    			append_dev(datalist, option2);
-    			append_dev(form, t30);
+    			append_dev(form, t29);
     			append_dev(form, input5);
 
     			if (!mounted) {
-    				dispose = listen_dev(input5, "click", /*click_handler*/ ctx[0], false, false, false);
+    				dispose = [
+    					listen_dev(input0, "keyup", /*setNome*/ ctx[0], false, false, false),
+    					listen_dev(select, "keyup", /*setSexo*/ ctx[4], false, false, false),
+    					listen_dev(input1, "keyup", /*setDistribuicao*/ ctx[3], false, false, false),
+    					listen_dev(input2, "keyup", /*setRua*/ ctx[1], false, false, false),
+    					listen_dev(input3, "keyup", /*setCasaNum*/ ctx[2], false, false, false),
+    					listen_dev(input4, "keyup", /*setFilme*/ ctx[5], false, false, false),
+    					listen_dev(input5, "click", /*click_handler*/ ctx[7], false, false, false),
+    					listen_dev(form, "submit", prevent_default(/*handleSubmit*/ ctx[6]), false, true, false)
+    				];
+
     				mounted = true;
     			}
     		},
@@ -26230,7 +26558,7 @@ var app = (function () {
     		d: function destroy(detaching) {
     			if (detaching) detach_dev(body);
     			mounted = false;
-    			dispose();
+    			run_all(dispose);
     		}
     	};
 
@@ -26245,9 +26573,48 @@ var app = (function () {
     	return block;
     }
 
-    function instance$5($$self, $$props) {
+    function instance$5($$self, $$props, $$invalidate) {
     	let { $$slots: slots = {}, $$scope } = $$props;
     	validate_slots("InserirLocacaoClienteNA", slots, []);
+    	let nome = "";
+    	const setNome = e => nome = e.target.value;
+    	let rua = "";
+
+    	const setRua = e => {
+    		rua = e.target.value;
+    	};
+
+    	let casaNum = "";
+
+    	const setCasaNum = e => {
+    		casaNum = e.target.value;
+    	};
+
+    	let distribuicao = "";
+
+    	const setDistribuicao = e => {
+    		distribuicao = e.target.value;
+    	};
+
+    	let sexo = "";
+
+    	const setSexo = e => {
+    		sexo = e.target.value;
+    	};
+
+    	let dataE = "";
+
+    	const setDataE = e => {
+    		dataE = e.target.value;
+    	};
+
+    	let filme = "";
+
+    	const setFilme = e => {
+    		filme = e.target.value;
+    	};
+
+    	const handleSubmit = () => AddLocacaoCNA(filme, dataE, empresa, nome);
     	const writable_props = [];
 
     	Object.keys($$props).forEach(key => {
@@ -26258,7 +26625,49 @@ var app = (function () {
     		bubble($$self, event);
     	}
 
-    	return [click_handler];
+    	$$self.$capture_state = () => ({
+    		AddLocacaoCNA,
+    		nome,
+    		setNome,
+    		rua,
+    		setRua,
+    		casaNum,
+    		setCasaNum,
+    		distribuicao,
+    		setDistribuicao,
+    		sexo,
+    		setSexo,
+    		dataE,
+    		setDataE,
+    		filme,
+    		setFilme,
+    		handleSubmit
+    	});
+
+    	$$self.$inject_state = $$props => {
+    		if ("nome" in $$props) nome = $$props.nome;
+    		if ("rua" in $$props) rua = $$props.rua;
+    		if ("casaNum" in $$props) casaNum = $$props.casaNum;
+    		if ("distribuicao" in $$props) distribuicao = $$props.distribuicao;
+    		if ("sexo" in $$props) sexo = $$props.sexo;
+    		if ("dataE" in $$props) dataE = $$props.dataE;
+    		if ("filme" in $$props) filme = $$props.filme;
+    	};
+
+    	if ($$props && "$$inject" in $$props) {
+    		$$self.$inject_state($$props.$$inject);
+    	}
+
+    	return [
+    		setNome,
+    		setRua,
+    		setCasaNum,
+    		setDistribuicao,
+    		setSexo,
+    		setFilme,
+    		handleSubmit,
+    		click_handler
+    	];
     }
 
     class InserirLocacaoClienteNA extends SvelteComponentDev {
@@ -26617,14 +27026,14 @@ var app = (function () {
     			input2 = element("input");
     			add_location(legend, file$2, 4, 12, 109);
     			attr_dev(label0, "for", "nome");
-    			attr_dev(label0, "class", "svelte-o4yls3");
+    			attr_dev(label0, "class", "svelte-11brbfu");
     			add_location(label0, file$2, 6, 16, 206);
     			attr_dev(input0, "name", "nome");
     			attr_dev(input0, "id", "nome");
     			add_location(input0, file$2, 7, 16, 253);
     			add_location(br, file$2, 8, 16, 299);
     			attr_dev(label1, "for", "filme");
-    			attr_dev(label1, "class", "svelte-o4yls3");
+    			attr_dev(label1, "class", "svelte-11brbfu");
     			add_location(label1, file$2, 9, 16, 320);
     			attr_dev(input1, "name", "filme");
     			attr_dev(input1, "id", "filme");
@@ -26638,14 +27047,14 @@ var app = (function () {
     			attr_dev(input2, "type", "button");
     			attr_dev(input2, "id", "botao");
     			input2.value = "Eliminar";
-    			attr_dev(input2, "class", "svelte-o4yls3");
+    			attr_dev(input2, "class", "svelte-11brbfu");
     			add_location(input2, file$2, 14, 16, 570);
     			attr_dev(form, "name", "retirar");
     			attr_dev(form, "method", "POST");
     			add_location(form, file$2, 5, 12, 154);
-    			attr_dev(fieldset, "class", "svelte-o4yls3");
+    			attr_dev(fieldset, "class", "svelte-11brbfu");
     			add_location(fieldset, file$2, 3, 8, 86);
-    			attr_dev(aside, "class", "retirar svelte-o4yls3");
+    			attr_dev(aside, "class", "retirar svelte-11brbfu");
     			add_location(aside, file$2, 2, 4, 54);
     			set_style(body, "background-color", "rgb(27, 8, 27)");
     			add_location(body, file$2, 1, 0, 1);
