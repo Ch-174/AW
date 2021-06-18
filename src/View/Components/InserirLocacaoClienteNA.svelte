@@ -1,13 +1,44 @@
+<script>
+	import { AddLocacaoCNA} from '../../Controllers/LocacaoController';
+
+	let nome = '';
+	const setNome = (e) => nome = e.target.value;
+	let rua = '';
+	const setRua = (e) => {
+		rua = e.target.value;
+	}
+  let casaNum = '';
+	const setCasaNum = (e) => {
+		casaNum = e.target.value;
+	}
+  let distribuicao = '';
+	const setDistribuicao = (e) => {
+		distribuicao = e.target.value;
+	}
+  let sexo = '';
+	const setSexo = (e) => {
+		sexo = e.target.value;
+	}
+  let dataE = '';
+	const setDataE = (e) => {
+		dataE = e.target.value;
+	}
+  let filme = '';
+	const setFilme = (e) => {
+		filme= e.target.value;
+	}
+	const handleSubmit = () => AddLocacaoCNA(filme,dataE,empresa, nome);
+</script>
 <body style="background-color: rgb(27, 8, 27);">
     <aside class="InserirClienteNA">
         <fieldset>
             <legend>Cliente Não-Associado</legend>
-            <form name="clienteNA" method="POST">
+            <form name="clienteNA" on:submit|preventDefault={handleSubmit}>
                 <label for="nome">Nome</label>
-                <input name="nome" id="nome">
+                <input name="nome" id="nome" on:keyup={setNome} placeholder="Nome">
                 <br>
                 <label for="sexo">Sexo</label>
-                <select name="sexo" id="sexo">
+                <select name="sexo" id="sexo" on:keyup={setSexo} placeholder="Selecione o sexo">
                     <option value="masculino">Masculino</option>
                     <option value="femenino">Femenino</option>
                 </select>
@@ -15,18 +46,17 @@
                 <br>
                 <span >Endereço</span>
                 <br>
-                <label style="margin-top:0%;" for="distribuicao">Distribuição</label>
-                <input name="distribuicao" id="distribuicao">
+                <label style="margin-top:0%;" for="distribuicao">Distribuição/Distrito</label>
+                <input name="distribuicao" id="distribuicao" on:keyup={setDistribuicao} placeholder="Distribuicao/Distrito"> 
                 <label style="margin-top:0%;" for="rua">Rua</label>
-                <input name="rua" id="rua">
+                <input name="rua" id="rua" on:keyup={setRua} placeholder="Rua">
                 <label style="margin-top:0%;" for="casaNum">Número da Casa</label>
-                <input name="casaNum" id="CasaNum">
+                <input name="casaNum" id="CasaNum" on:keyup={setCasaNum} placeholder="Numero da casa">
 
                 <br>
                 <label for="filme">Selecione o Filme</label>
-                <input name="filme" id="filme" list="filmes">
+                <input name="filme" id="filme" list="filmes" on:keyup={setFilme} placeholder="Selecione o filme">
                 <datalist id="filmes" >
-                    <option value="valor1">Valor1</option>
                 </datalist>
                 <input type="button" id="botao" on:click="" value="Confirmar">
 
@@ -62,5 +92,6 @@
       #botao{
 		background-color: rgb(51, 0, 43);;
         border-radius: 0.2rem;
+        color: white;
       }
     </style>

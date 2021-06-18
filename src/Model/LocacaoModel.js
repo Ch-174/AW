@@ -93,9 +93,6 @@ export default class Locacao {
                 nome: this.clienteA.getNome(),
                 qtdFilme: 1
             })
-            .then((docRef) => {
-                console.log("Document written with ID: ", docRef.id);
-            })
             .catch((error) => {
                 console.error("Error adding document: ", error);
             }); 
@@ -112,5 +109,22 @@ export default class Locacao {
               bol = snapshot.doc.exists;
               return bol;
         }); 
+    }
+    InserirLocacaoCNA(nome,distribuicao,rua,casaNum,sexo){
+        this.clienteNA = new Nao_Associado(sexo,nome,distribuicao,rua,casaNum)
+        
+           const db = firebase.firestore();
+            db.collection("cliente").add({
+                casaNum: this.clienteNA.getCasaNum(),
+                distribuicao: this.clienteNA.getDistribuicao(),
+                nome: this.clienteNA.getNome(),
+                rua: this.clienteNA.getRua(),
+                id:this.getIdC() ,
+                nome: this.clienteA.getNome(),
+            })
+            .catch((error) => {
+                console.error("Error adding document: ", error);
+            }); 
+        
     }
 }

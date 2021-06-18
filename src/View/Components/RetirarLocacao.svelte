@@ -40,7 +40,8 @@
         border: rgb(146, 1, 122);
       }
       #botao{
-		background-color: rgb(51, 0, 43);;
+		    background-color: rgb(51, 0, 43);;
         border-radius: 0.2rem;
+        color: white;
       }
     </style>

@@ -23,25 +23,23 @@
             <legend>Cliente Associado</legend>
             <form name="clienteA" on:submit|preventDefault={handleSubmit}>
                 <label for="nome">Nome</label>
-                {nome}
-                <input name="nome" id="nome" on:keyup={setNome} placeholder="nome">
+                
+                <input name="nome" id="nome" on:keyup={setNome} placeholder="Nome">
                 <br>
                 <label for="empresa">Empresa</label>
-                {empresa}
-                <input name="empresa" id="empresa" on:keyup={setEmpresa} placeholder="empresa">
+                
+                <input name="empresa" id="empresa" on:keyup={setEmpresa} placeholder="Empresa">
                 <br>
                 <label for="dataE">Data de entrega</label>
-                <label for="dataE">Formato:December 10, 1815 </label> 
-                {dataE}
-                <input name="dataE" id="dataE" on:keyup={setDataE} placeholder="dataE">
+                
+                <input name="dataE" id="dataE" on:keyup={setDataE} placeholder="December 10, 1815">
                 <br>
                 <label for="filme">Selecione o Filme</label>
-                {filme}
-                <input name="filme" id="filme" list="filmes" on:keyup={setFilme} placeholder="filme">
+                
+                <input name="filme" id="filme" list="filmes" on:keyup={setFilme} placeholder="Selecione filme">
                 <datalist id="filmes" >
-                    <option value="valor1">Valor1</option>
                 </datalist>
-                <input type="submit" id="botao" on:click="" value="Confirmar">
+                <input type="submit" id="botao" value="Confirmar">
             </form>
         </fieldset>
     </aside>
@@ -71,5 +69,6 @@
       #botao{
 		background-color: rgb(51, 0, 43);;
         border-radius: 0.2rem;
+        color: white;
       }
     </style>

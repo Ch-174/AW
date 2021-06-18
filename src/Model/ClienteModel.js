@@ -36,13 +36,12 @@ export class Associado extends Cliente{
         return this.quantFilmes;}
 }
 export class Nao_Associado extends Cliente{
-    constructor(sexo,nome,distribuicao,rua,casaNum,dataNas){
+    constructor(sexo,nome,distribuicao,rua,casaNum){
         super(nome);
         this.sexo = sexo;
         this.distribuicao = distribuicao;
         this.rua = rua;
         this.casaNum = casaNum;
-        this.dataNas = dataNas;
     }
     getSexo() {return this.sexo;}
     getEndereco() {return this.endereco;}
