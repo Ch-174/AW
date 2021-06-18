@@ -1,9 +1,7 @@
-import Filme from './FilmeModel.js';
-import Associado from './ClienteModel.js';
-import Nao_Associado from './ClienteModel.js';
-import firebase from './Firebase.js';
-export default class Locacao{
-
+import Filme from './FilmeModel';
+import { Associado, Nao_Associado } from './ClienteModel';
+import firebase from './Firebase';
+export default class Locacao {
      constructor(filme, dataAluguer,dataEntrega){
         this.filme = new Filme(filme);
         this.dataAluguer = dataAluguer;

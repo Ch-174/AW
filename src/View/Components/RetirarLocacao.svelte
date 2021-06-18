@@ -18,7 +18,7 @@
     </aside>
     </body>
     <style>
-         .retirar {
+      .retirar {
        
         padding: 1rem 2rem;
         margin: 5rem 2rem;

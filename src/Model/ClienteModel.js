@@ -1,12 +1,10 @@
-"useStrict"
-
 class Cliente{
     constructor (nome){
         this.nome = nome;
     }
     getNome(){return this.nome;}
 }
-export default class Associado extends Cliente{
+export class Associado extends Cliente{
     constructor(empresa,nome){
         super(nome);
         this.empresa = empresa;
@@ -37,7 +35,7 @@ export default class Associado extends Cliente{
 
         return this.quantFilmes;}
 }
-export default class Nao_Associado extends Cliente{
+export class Nao_Associado extends Cliente{
     constructor(sexo,nome,distribuicao,rua,casaNum,dataNas){
         super(nome);
         this.sexo = sexo;
@@ -53,10 +51,10 @@ export default class Nao_Associado extends Cliente{
     getCasaNum() {return this.casaNum;}
 }
 
-import firebase from './firebase';
+// import firebase from './firebase';
 
 
-  const db = firebase.firestore();
-  const clientes = db.collection(nome).get().then(docs => docs.data()); 
+//   const db = firebase.firestore();
+//   const clientes = db.collection(nome).get().then(docs => docs.data()); 
 
 

@@ -1,6 +1,10 @@
 <script>
   import { Route } from "svelte-navigator";
-  import { InserirLocacaoClienteA ,InserirLocacaoClienteNA,ListarLocacoesAll,ListarLocacoesAllMulta,RetirarLocacao} from '.';
+  import InserirLocacaoClienteA from './InserirLocacaoClienteA.svelte'
+  import InserirLocacaoClienteNA from './InserirLocacaoClienteNA.svelte'
+  import ListarLocacoesAll from './ListarLocacoesAll.svelte'
+  import ListarLocacoesAllMulta from './ListarLocacoesAllMulta.svelte'
+  import RetirarLocacao from './RetirarLocacao.svelte'
  
 </script>
 

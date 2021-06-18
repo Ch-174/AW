@@ -3,7 +3,6 @@
 	import { LeftSide, RightSide} from './Components'
 </script>
 <body>
-	
 	<main>
 	<Router>
 			<LeftSide />
@@ -24,6 +23,9 @@
 	}
 	:global(body) {
 		overflow-x: hidden;
+	}
+	:global(input) {
+		color: black;
 	}
 	main {
 		width: 100vw;

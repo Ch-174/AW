@@ -1,5 +1,5 @@
 <script>
-	import { AddLocacaoCA } from 'src/Controllers/LocacaoController.js';
+	import { AddLocacaoCA } from '../../Controllers/LocacaoController';
 
 	let nome = '';
 	const setNome = (e) => nome = e.target.value;
@@ -21,7 +21,7 @@
     <aside class="InserirClienteA">
         <fieldset>
             <legend>Cliente Associado</legend>
-            <form name="clienteA" method="POST" on:submit|preventDefault={handleSubmit}>
+            <form name="clienteA" on:submit|preventDefault={handleSubmit}>
                 <label for="nome">Nome</label>
                 {nome}
                 <input name="nome" id="nome" on:keyup={setNome} placeholder="nome">
